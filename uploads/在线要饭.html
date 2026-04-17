@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>芜湖24小时要饭网</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        .top-info {
+            background: linear-gradient(to right, red, violet);
+            color: white;
+            text-align: center;
+            padding: 10px;
+        }
+        .middle-section {
+            text-align: center;
+            margin: 20px;
+        }
+        .middle-section img {
+            max-width: 100%;
+            height: auto;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.9);
+            border-radius: 8px;
+            transition: box-shadow 0.3s ease;
+        }
+        .middle-section img:hover {
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.9);
+        }
+        .bottom-tip {
+            text-align: center;
+            margin: 20px;
+            color: gray;
+        }
+        a {
+            text-decoration: none;
+        }
+        /* 图片加载失败提示样式 */
+        .img-error {
+            color: #ff4444;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+    </style>
+    <script>
+        // 保留你原有的图片链接，不做任何修改
+        const images = ["https://free-img.400040.xyz/4/2025/12/17/6942473c3a691.jpg", "https://free-img.400040.xyz/4/2025/12/17/69426696e16a4.jpg"];
+        let currentIndex = 0;
+
+        // 修复切换逻辑 + 加载容错（不改变你的链接）
+        function showNextImage() {
+            currentIndex = (currentIndex + 1) % images.length;
+            const imgElement = document.getElementById("mainImage");
+            const newSrc = images[currentIndex];
+
+            // 切换时显示状态提示
+            imgElement.alt = `切换中...(${currentIndex + 1}/${images.length})`;
+            
+            // 加载成功/失败监听，避免空白
+            imgElement.onload = function() {
+                imgElement.alt = `支付宝收款码(${currentIndex + 1}/${images.length})`;
+                document.querySelector(".img-error")?.remove();
+            };
+            imgElement.onerror = function() {
+                imgElement.alt = "图片加载失败";
+                if (!document.querySelector(".img-error")) {
+                    const errorTip = document.createElement("div");
+                    errorTip.className = "img-error";
+                    errorTip.textContent = "当前图片链接暂时无法访问，可尝试刷新或更换链接";
+                    document.querySelector(".middle-section").appendChild(errorTip);
+                }
+            };
+
+            imgElement.src = newSrc;
+        }
+
+        // 确保DOM加载完成后绑定事件（修复核心）
+        document.addEventListener("DOMContentLoaded", function() {
+            const imgElement = document.getElementById("mainImage");
+            if (imgElement) {
+                imgElement.addEventListener("click", showNextImage);
+                // 初始化第一张图的加载监听
+                imgElement.onerror = function() {
+                    imgElement.alt = "初始图片加载失败";
+                    const errorTip = document.createElement("div");
+                    errorTip.className = "img-error";
+                    errorTip.textContent = "初始图片链接暂时无法访问";
+                    document.querySelector(".middle-section").appendChild(errorTip);
+                };
+            }
+        });
+    </script>
+</head>
+<body>
+    <div class="top-info">
+        <p>全天24小时无人值守要饭，要饭我们是专业的。</p>
+        <p>大哥哥大姐姐们啊！你们都是有钱的人啊~谁有那多余的零钱？给我这流浪的人啊...</p>
+    </div>
+    <div style="text-align: center;">
+        <h1>点击图片切换支付宝收款码</h1>
+    </div>
+    <div class="middle-section">
+        <img id="mainImage" src="https://free-img.400040.xyz/4/2025/12/17/6942473c3a691.jpg" alt="支付宝收款码(1/2)">
+    </div>
+    <div class="bottom-tip">
+        <p>温馨提示：网页功能仅供娱乐，打赏金额将全部用于网站建设</p>
+        <p>友情链接👉<a href="https://msr-yyds.great-site.net/?i=1">芜湖小站</a></p>
+    </div>
+
+    <script src="js/redirectTo.js"></script>
+    <script src="js/script.js"></script>
+    <script src="https://api.vvhan.com/api/script/snow"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/jquery/1.10.0/jquery.min.js"></script>
+    <script src="https://myhkw.cn/player/js/player.js" id="myhk" key="demo" m="1"></script>
+</body>
+</html>
