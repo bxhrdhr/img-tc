@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>接住小球 | 灵动接球游戏</title>
+    <style>
+        * {
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(145deg, #1a2a3a 0%, #0f1a24 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', 'Poppins', 'Roboto', system-ui, -apple-system, 'Microsoft YaHei', sans-serif;
+            touch-action: none; /* 优化触屏操作 */
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            border-radius: 64px;
+        }
+
+        canvas {
+            display: block;
+            margin: 0 auto;
+            border-radius: 32px;
+            box-shadow: 0 20px 35px rgba(0, 0, 0, 0.4), 0 0 0 2px rgba(255, 255, 255, 0.1) inset;
+            cursor: none;
+            background: #0b2b2f;
+            width: 100%;
+            height: auto;
+            transition: all 0.2s ease;
+        }
+
+        .info-panel {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            width: 100%;
+            gap: 30px;
+            margin-top: 20px;
+            margin-bottom: 12px;
+            background: rgba(10, 20, 28, 0.7);
+            backdrop-filter: blur(8px);
+            padding: 12px 28px;
+            border-radius: 80px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+
+        .score-box, .lives-box {
+            background: #010d13;
+            padding: 8px 24px;
+            border-radius: 60px;
+            text-align: center;
+            color: #f0f9ff;
+            font-weight: bold;
+            letter-spacing: 1px;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.4), 0 4px 10px rgba(0,0,0,0.2);
+        }
+
+        .score-box span, .lives-box span {
+            font-size: 1.1rem;
+            margin-right: 8px;
+            color: #b3e4ff;
+        }
+
+        .score-box .score-value, .lives-box .lives-value {
+            font-size: 2rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #f9e45b, #ffb347);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .lives-box .lives-value {
+            background: linear-gradient(135deg, #ff7e5e, #feb47b);
+            background-clip: text;
+            -webkit-background-clip: text;
+        }
+
+        button {
+            background: radial-gradient(circle at 30% 10%, #ffcf4a, #ff9f2e);
+            border: none;
+            font-size: 1.3rem;
+            font-weight: bold;
+            padding: 8px 28px;
+            border-radius: 60px;
+            color: #221c0f;
+            cursor: pointer;
+            box-shadow: 0 6px 0 #b1620c;
+            transition: 0.07s linear;
+            font-family: inherit;
+            letter-spacing: 1px;
+        }
+
+        button:active {
+            transform: translateY(3px);
+            box-shadow: 0 3px 0 #b1620c;
+        }
+
+        .game-status {
+            font-size: 1rem;
+            font-weight: bold;
+            background: #1e2f3a;
+            padding: 6px 18px;
+            border-radius: 40px;
+            color: #fcd48d;
+            letter-spacing: 0.5px;
+        }
+
+        @media (max-width: 700px) {
+            .info-panel {
+                gap: 15px;
+                padding: 8px 20px;
+            }
+            .score-box, .lives-box {
+                padding: 4px 18px;
+            }
+            .score-box .score-value, .lives-box .lives-value {
+                font-size: 1.5rem;
+            }
+            button {
+                font-size: 1rem;
+                padding: 6px 20px;
+            }
+        }
+
+        footer {
+            margin-top: 12px;
+            font-size: 0.7rem;
+            color: #6f8f9c;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+<div>
+    <div class="game-container">
+        <canvas id="gameCanvas" width="800" height="500"></canvas>
+        <div class="info-panel">
+            <div class="score-box">
+                <span>🎯 分数</span>
+                <span class="score-value" id="scoreDisplay">0</span>
+            </div>
+            <div class="lives-box">
+                <span>❤️ 生命</span>
+                <span class="lives-value" id="livesDisplay">3</span>
+            </div>
+            <button id="resetButton">✨ 新游戏</button>
+        </div>
+        <div class="game-status" id="gameStatusText">✨ 移动鼠标 / 手指滑动 接住小球 ✨</div>
+        <footer>🎈 接住小球加分，漏掉会失去生命 | 每接一球会在顶部新增一个活力小球</footer>
+    </div>
+</div>
+
+<script>
+    (function(){
+        // ----- 画布元素 -----
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // ----- 固定尺寸参数 -----
+        const CANVAS_W = 800;
+        const CANVAS_H = 500;
+        canvas.width = CANVAS_W;
+        canvas.height = CANVAS_H;
+        
+        // ----- 游戏参数 -----
+        let gameRunning = true;      // 游戏是否进行中 (false代表游戏结束)
+        let score = 0;
+        let lives = 3;
+        
+        // ----- 挡板参数 -----
+        const PADDLE_W = 100;
+        const PADDLE_H = 16;
+        let paddleX = (CANVAS_W - PADDLE_W) / 2;
+        // 挡板Y坐标 (固定底部留出边距)
+        const PADDLE_Y = CANVAS_H - PADDLE_H - 12;
+        
+        // ----- 小球参数 -----
+        const BALL_RADIUS = 8;
+        let balls = [];     // 存储小球对象
+        
+        // ----- 辅助标志（防止游戏结束后仍触发碰撞）-----
+        let gameOverFlag = false;   // 与gameRunning同步，用于显示
+        
+        // ----- UI 元素 -----
+        const scoreSpan = document.getElementById('scoreDisplay');
+        const livesSpan = document.getElementById('livesDisplay');
+        const resetBtn = document.getElementById('resetButton');
+        const gameStatusSpan = document.getElementById('gameStatusText');
+        
+        // ----- 工具函数：随机数范围 -----
+        function randomRange(min, max) {
+            return min + Math.random() * (max - min);
+        }
+        
+        // ----- 生成一个新球 (位置顶部，随机速度) -----
+        function createNewBall() {
+            // 确保新球不会超出左右边界，且不会立即撞板 (y坐标靠上)
+            const randX = randomRange(BALL_RADIUS + 10, CANVAS_W - BALL_RADIUS - 10);
+            const randY = randomRange(BALL_RADIUS + 8, 100);  // 顶部区域 8~100px
+            // 水平速度范围 -1.8 ～ 1.8，垂直速度 3.0 ～ 6.2 (下落感明显但不太快)
+            const vx = randomRange(-1.8, 1.8);
+            const vy = randomRange(3.2, 6.2);
+            return {
+                x: randX,
+                y: randY,
+                vx: vx,
+                vy: vy,
+                r: BALL_RADIUS
+            };
+        }
+        
+        // ----- 初始化所有小球（开局生成5个活泼小球）-----
+        function initBalls(ballCount = 5) {
+            const newBalls = [];
+            for (let i = 0; i < ballCount; i++) {
+                // 避免生成时大量重叠，稍微错开y轴
+                let randX = randomRange(BALL_RADIUS + 15, CANVAS_W - BALL_RADIUS - 15);
+                let randY = randomRange(BALL_RADIUS + 12, 120 + i * 25);
+                if (randY > CANVAS_H - 100) randY = CANVAS_H - 140;
+                const vx = randomRange(-1.6, 1.6);
+                const vy = randomRange(3.0, 5.8);
+                newBalls.push({
+                    x: randX,
+                    y: randY,
+                    vx: vx,
+                    vy: vy,
+                    r: BALL_RADIUS
+                });
+            }
+            return newBalls;
+        }
+        
+        // ----- 重置游戏全部状态 -----
+        function resetGame() {
+            // 重置全局变量
+            gameRunning = true;
+            gameOverFlag = false;
+            score = 0;
+            lives = 3;
+            updateUI();
+            
+            // 重置挡板位置
+            paddleX = (CANVAS_W - PADDLE_W) / 2;
+            
+            // 重置小球数组 (全新5颗)
+            balls = initBalls(5);
+            
+            // 更新状态文字
+            gameStatusSpan.innerText = '🎉 游戏进行中 | 接住小球！ 🎉';
+            gameStatusSpan.style.color = "#fcd48d";
+            
+            // 如果之前游戏结束显示遮罩，现在清除标志
+            // 无需额外操作，动画循环会继续正常更新
+        }
+        
+        // 更新UI数字
+        function updateUI() {
+            scoreSpan.innerText = score;
+            livesSpan.innerText = lives;
+        }
+        
+        // ----- 碰撞检测: 圆形 vs 矩形（挡板）精确碰撞-----
+        function checkCollisionCircleRect(ball, rectX, rectY, rectW, rectH) {
+            // 找到矩形上离圆心最近的点
+            let closestX = Math.max(rectX, Math.min(ball.x, rectX + rectW));
+            let closestY = Math.max(rectY, Math.min(ball.y, rectY + rectH));
+            let dx = ball.x - closestX;
+            let dy = ball.y - closestY;
+            return (dx * dx + dy * dy) < ball.r * ball.r;
+        }
+        
+        // ----- 处理边界碰撞（左右墙 + 天花板）-----
+        // 注意: 底部边界不在这里反弹，而是漏掉判定（移除并减生命）
+        function handleBoundaries(ball) {
+            // 左墙 / 右墙 反弹并修正位置
+            if (ball.x - ball.r <= 0) {
+                ball.x = ball.r + 0.1;
+                ball.vx = -ball.vx;
+            }
+            if (ball.x + ball.r >= CANVAS_W) {
+                ball.x = CANVAS_W - ball.r - 0.1;
+                ball.vx = -ball.vx;
+            }
+            // 天花板反弹（不让球飞出顶部）
+            if (ball.y - ball.r <= 0) {
+                ball.y = ball.r + 0.1;
+                ball.vy = -ball.vy;
+                // 避免卡天花板能量太奇怪，给一点点上提
+                if (ball.vy > -0.5) ball.vy = -Math.abs(ball.vy);
+            }
+        }
+        
+        // ----- 漏掉检测: 超出底部 -> 移除球并减命 -----
+        // 返回值: 是否因为漏掉导致游戏结束 (生命归零)
+        function handleMissedBalls() {
+            const beforeCount = balls.length;
+            const missedIndices = [];
+            for (let i = 0; i < balls.length; i++) {
+                const ball = balls[i];
+                // 如果球的底部超出画布高度，视为漏掉
+                if (ball.y + ball.r >= CANVAS_H) {
+                    missedIndices.push(i);
+                }
+            }
+            
+            // 从后往前删除漏掉的球，并减少生命
+            if (missedIndices.length > 0) {
+                for (let i = missedIndices.length - 1; i >= 0; i--) {
+                    const idx = missedIndices[i];
+                    balls.splice(idx, 1);
+                    lives--;
+                    if (lives < 0) lives = 0;
+                    updateUI();
+                    
+                    // 游戏结束判定
+                    if (lives <= 0) {
+                        gameRunning = false;
+                        gameOverFlag = true;
+                        gameStatusSpan.innerText = '💀 游戏结束 💀  点击「新游戏」继续挑战';
+                        gameStatusSpan.style.color = "#ffa098";
+                        return true;   // 游戏结束，无需继续其他处理
+                    }
+                }
+                updateUI();
+            }
+            return false; // 游戏未结束
+        }
+        
+        // ----- 接住碰撞处理: 检测所有与挡板相撞的小球 -> 加分，移除该球，并在顶部生成一个新球 -----
+        function handleCatchCollisions() {
+            if (!gameRunning) return;  // 游戏结束不处理接球
+            
+            // 从后往前遍历，避免索引错误并即时操作数组
+            for (let i = balls.length-1; i >= 0; i--) {
+                const ball = balls[i];
+                // 碰撞检测（挡板区域）
+                const isColliding = checkCollisionCircleRect(ball, paddleX, PADDLE_Y, PADDLE_W, PADDLE_H);
+                if (isColliding) {
+                    // 接住啦！加分，移除当前小球，并在顶部生成一颗新球
+                    score++;
+                    updateUI();
+                    
+                    // 移除这个被接住的小球
+                    balls.splice(i, 1);
+                    
+                    // 增加一颗新球（保持游戏动态，总数维持原来数量不变或略增加？原意是保持挑战，每接一个补一个）
+                    // 这样小球总数在接住瞬间不变（移除一个，新增一个）
+                    const freshBall = createNewBall();
+                    balls.push(freshBall);
+                    
+                    // 小优化：轻微得分特效感（无实际影响，只是让游戏更流畅）
+                    // 可添加一点简单的视觉反馈在绘制层
+                }
+            }
+        }
+        
+        // ----- 更新所有小球的位置（移动+边界碰撞）-----
+        function updateBallsMovement() {
+            for (let ball of balls) {
+                ball.x += ball.vx;
+                ball.y += ball.vy;
+                // 边界处理（左右上）
+                handleBoundaries(ball);
+                // 注意：底部边界不处理，由miss逻辑单独负责
+            }
+        }
+        
+        // ----- 每帧主更新逻辑（移动，漏掉，接住）-----
+        function updateGame() {
+            if (!gameRunning) {
+                // 游戏结束，不更新任何游戏逻辑，只等待重绘（会在draw中显示结束画面）
+                return;
+            }
+            
+            // 1. 移动小球并处理墙壁/天花板
+            updateBallsMovement();
+            
+            // 2. 漏掉检测 (如果漏掉导致生命归零, gameRunning 会变成false)
+            const gameEndByMiss = handleMissedBalls();
+            if (gameEndByMiss) {
+                // 游戏结束，不再执行接住逻辑，防止结束瞬间又加分
+                return;
+            }
+            
+            // 3. 接住碰撞检测（加分+替换新球）
+            handleCatchCollisions();
+            
+            // 额外安全检测：如果小球数量为0但是游戏还没结束，紧急补球（一般不会发生）
+            if (balls.length === 0 && gameRunning && lives > 0) {
+                // 意外情况：没有任何球了，补3个球
+                for (let i=0; i<3; i++) {
+                    balls.push(createNewBall());
+                }
+            }
+            
+            // 如果生命归零但 gameRunning 标志未更新 (二次安全)
+            if (lives <= 0) {
+                gameRunning = false;
+                gameOverFlag = true;
+                gameStatusSpan.innerText = '💀 游戏结束 💀  点击「新游戏」继续挑战';
+                gameStatusSpan.style.color = "#ffa098";
+            }
+        }
+        
+        // ---------- 华丽绘制模块 ----------
+        function drawBackground() {
+            // 深邃渐变背景
+            const grad = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
+            grad.addColorStop(0, '#0b3b3f');
+            grad.addColorStop(1, '#06222b');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+            
+            // 装饰网格光晕
+            ctx.strokeStyle = 'rgba(100, 200, 210, 0.2)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < CANVAS_W; i += 40) {
+                ctx.beginPath();
+                ctx.moveTo(i, 0);
+                ctx.lineTo(i, CANVAS_H);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(0, i % CANVAS_H);
+                ctx.lineTo(CANVAS_W, i % CANVAS_H);
+                ctx.stroke();
+            }
+        }
+        
+        function drawBalls() {
+            for (let ball of balls) {
+                // 光影球体
+                const gradBall = ctx.createRadialGradient(ball.x-3, ball.y-3, 2, ball.x, ball.y, ball.r);
+                gradBall.addColorStop(0, '#ffde9c');
+                gradBall.addColorStop(0.7, '#ffaa44');
+                gradBall.addColorStop(1, '#e07c2c');
+                ctx.beginPath();
+                ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI*2);
+                ctx.fillStyle = gradBall;
+                ctx.fill();
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = "rgba(255,180,40,0.6)";
+                ctx.beginPath();
+                ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI*2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                // 高光
+                ctx.beginPath();
+                ctx.arc(ball.x-2, ball.y-2, 2, 0, Math.PI*2);
+                ctx.fillStyle = 'rgba(255,250,210,0.7)';
+                ctx.fill();
+            }
+        }
+        
+        function drawPaddle() {
+            // 流光挡板
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = "#ffb347";
+            ctx.fillStyle = '#ffcf6e';
+            ctx.beginPath();
+            ctx.roundRect(paddleX, PADDLE_Y, PADDLE_W, PADDLE_H, 12);
+            ctx.fill();
+            ctx.fillStyle = '#ffa631';
+            ctx.beginPath();
+            ctx.roundRect(paddleX+4, PADDLE_Y-2, PADDLE_W-8, 4, 4);
+            ctx.fill();
+            ctx.fillStyle = '#f5bc70';
+            ctx.beginPath();
+            ctx.roundRect(paddleX+2, PADDLE_Y+2, PADDLE_W-4, 4, 3);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            // 边缘光效
+            ctx.strokeStyle = '#fff2bf';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.roundRect(paddleX, PADDLE_Y, PADDLE_W, PADDLE_H, 12);
+            ctx.stroke();
+        }
+        
+        function drawUItext() {
+            ctx.font = "bold 20px 'Segoe UI'";
+            ctx.fillStyle = "#eafbff";
+            ctx.shadowBlur = 0;
+            ctx.fillText("⚡ 灵动接球", 20, 50);
+            ctx.font = "12px monospace";
+            ctx.fillStyle = "#bddce8";
+            ctx.fillText("移动鼠标/手指", CANVAS_W-130, 40);
+        }
+        
+        function drawGameOverlay() {
+            if (!gameRunning) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+                ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+                ctx.font = "bold 32 system-ui, 'Segoe UI'";
+                ctx.fillStyle = "#ffc285";
+                ctx.shadowBlur = 0;
+                ctx.textAlign = "center";
+                ctx.fillText("GAME OVER", CANVAS_W/2, CANVAS_H/2 - 30);
+                ctx.font = "18px system-ui";
+                ctx.fillStyle = "#fdd5a0";
+                ctx.fillText("点击「新游戏」继续", CANVAS_W/2, CANVAS_H/2 + 30);
+                ctx.textAlign = "left";
+            }
+        }
+        
+        // roundRect 辅助
+        if (!CanvasRenderingContext2D.prototype.roundRect) {
+            CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+                if (w < 2 * r) r = w / 2;
+                if (h < 2 * r) r = h / 2;
+                this.moveTo(x+r, y);
+                this.lineTo(x+w-r, y);
+                this.quadraticCurveTo(x+w, y, x+w, y+r);
+                this.lineTo(x+w, y+h-r);
+                this.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
+                this.lineTo(x+r, y+h);
+                this.quadraticCurveTo(x, y+h, x, y+h-r);
+                this.lineTo(x, y+r);
+                this.quadraticCurveTo(x, y, x+r, y);
+                return this;
+            };
+        }
+        
+        function draw() {
+            drawBackground();
+            drawBalls();
+            drawPaddle();
+            drawUItext();
+            drawGameOverlay();
+        }
+        
+        // ----- 控制板子: 鼠标 + 触摸 (相对于canvas坐标)-----
+        function handleMove(clientX, clientY) {
+            if (!gameRunning && lives <= 0) return; // 游戏结束也可以移动板子但无伤大雅，但是为了重置前视觉允许移动
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;   // canvas实际像素比
+            let canvasX = (clientX - rect.left) * scaleX;
+            // 边界钳位
+            canvasX = Math.min(Math.max(canvasX, 0), CANVAS_W - PADDLE_W);
+            if (!isNaN(canvasX)) {
+                paddleX = canvasX;
+            }
+        }
+        
+        function onMouseMove(e) {
+            e.preventDefault();
+            handleMove(e.clientX, e.clientY);
+        }
+        
+        function onTouchMove(e) {
+            e.preventDefault();
+            if (e.touches.length) {
+                handleMove(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        }
+        
+        function onTouchStart(e) {
+            e.preventDefault();
+            if (e.touches.length) {
+                handleMove(e.touches[0].clientX, e.touches[0].clientY);
+            }
+        }
+        
+        // 鼠标离开canvas区域时，不做额外操作，避免板子跳变（可选保留最后位置）
+        // 但无需额外动作
+        
+        // ----- 动画循环 -----
+        let animationId = null;
+        function gameLoop() {
+            updateGame();    // 更新所有逻辑 (移动,碰撞,生命,得分)
+            draw();          // 绘制所有元素
+            animationId = requestAnimationFrame(gameLoop);
+        }
+        
+        // ----- 注册事件 & 重置监听 -----
+        function bindEvents() {
+            canvas.addEventListener('mousemove', onMouseMove);
+            canvas.addEventListener('touchmove', onTouchMove, { passive: false });
+            canvas.addEventListener('touchstart', onTouchStart, { passive: false });
+            canvas.addEventListener('touchcancel', (e) => e.preventDefault());
+            // 避免鼠标离开canvas时卡边缘，但不影响游戏
+            window.addEventListener('resize', () => {}); // 占位无操作
+        }
+        
+        // 重置按钮逻辑
+        resetBtn.addEventListener('click', () => {
+            resetGame();
+            // 额外确保界面更新，如果有游戏结束标志清除干净
+            gameRunning = true;
+            gameOverFlag = false;
+            // 补全生命值显示
+            if (lives <= 0) {
+                lives = 3;
+                score = 0;
+                updateUI();
+            }
+            // 重新初始化小球（确保球数够）
+            balls = initBalls(5);
+            paddleX = (CANVAS_W - PADDLE_W) / 2;
+            gameStatusSpan.innerText = '🎉 游戏进行中 | 接住小球！ 🎉';
+            gameStatusSpan.style.color = "#fcd48d";
+            updateUI();
+        });
+        
+        // 初始化游戏
+        function initGame() {
+            resetGame();     // 直接调用重置初始状态（包含 balls, lives, score）
+            bindEvents();
+            gameLoop();
+        }
+        
+        // 启动一切
+        initGame();
+    })();
+</script>
+</body>
+</html>
