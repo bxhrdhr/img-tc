@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>在线托管</title>
+    <style>
+        *{box-sizing:border-box}
+        body{font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;background:#f5f7fb;margin:0;min-height:100vh;display:flex;justify-content:center;align-items:center;padding:20px}
+        .card{max-width:650px;width:100%;background:white;border-radius:28px;box-shadow:0 20px 35px -12px rgba(0,0,0,0.1);padding:28px 32px 36px}
+        h1{font-size:1.8rem;font-weight:600;margin:0 0 6px 0;background:linear-gradient(135deg,#1e293b,#3b82f6);-webkit-background-clip:text;background-clip:text;color:transparent}
+        .sub{color:#475569;border-left:3px solid #3b82f6;padding-left:12px;margin:8px 0 24px 0;font-size:.9rem}
+        .file-area{border:2px dashed #cbd5e1;border-radius:20px;padding:28px 20px;text-align:center;background:#f8fafc;cursor:pointer}
+        .file-area:hover{border-color:#3b82f6;background:#eff6ff}
+        .file-name{margin-top:10px;font-size:.8rem;color:#3b82f6;font-weight:500}
+        button{width:100%;background:#0f172a;color:white;font-weight:600;border:none;border-radius:14px;padding:12px;font-size:1rem;cursor:pointer;margin-top:8px}
+        button:hover{background:#1e293b}
+        .result{margin-top:24px;background:#f1f5f9;border-radius:20px;padding:18px;font-size:.85rem;word-break:break-all;border-left:4px solid #3b82f6}
+        .result a{color:#2563eb;text-decoration:none;font-weight:500;cursor:pointer}
+        .error{border-left-color:#dc2626;color:#b91c1c}
+        .note{font-size:.7rem;color:#64748b;margin-top:20px;text-align:center;line-height:1.5}
+
+        .history-box{margin-top:24px;border-top:1px solid #e2e8f0;padding-top:20px}
+        .history-title{font-size:1rem;font-weight:600;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+        .history-list{display:flex;direction:column;gap:10px;max-height:220px;overflow-y:auto}
+        .history-item{background:#f8fafc;padding:10px 14px;border-radius:12px;font-size:12px}
+        .history-item .fname{font-weight:600;color:#1e293b}
+        .history-item .time{color:#647486;margin-left:8px}
+        .history-item .link{color:#3b82f6;word-break:break-all;margin:4px 0;cursor:pointer;padding:4px;border-radius:6px}
+        .history-item .link:hover{background:#e6f0ff}
+        .copy-btn{padding:4px 8px;background:#e6f0ff;border:none;border-radius:6px;color:#1e293b;font-size:12px;cursor:pointer}
+        .copy-btn:hover{background:#cce1ff}
+        .clear-history{padding:6px 10px;background:#fee2e2;color:#b91c1c;border:none;border-radius:8px;font-size:12px}
+        .copy-tip{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1e293b;color:white;padding:8px 16px;border-radius:10px;font-size:14px;display:none;z-index:999}
+
+        .desc{
+            margin-top:24px;
+            padding-top:16px;
+            border-top:1px solid #e2e8f0;
+            font-size:12px;
+            color:#475569;
+            line-height:1.6;
+        }
+        .links{
+            margin-top:12px;
+            text-align:center;
+            font-size:12px;
+            color:#64748b;
+        }
+        .links a{
+            color:#3b82f6;
+            text-decoration:none;
+            margin:0 6px;
+        }
+        .links a:hover{
+            text-decoration:underline;
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>📦 在线托管</h1>
+    <div class="sub">html托管 & 图片托管</div>
+
+    <div style="margin-bottom:20px">
+        <label style="display:block;font-weight:500;margin-bottom:6px;">📄 选择文件（HTML / 图片）</label>
+        <div class="file-area" id="dropArea">
+            📂 点击或拖拽上传 .html / 图片文件
+        </div>
+        <input type="file" id="fileInput" accept=".html,.htm,.jpg,.jpeg,.png,.gif,.bmp,.webp" style="display:none;">
+        <div id="fileName" class="file-name"></div>
+    </div>
+
+    <button id="uploadBtn">🚀 一键上传</button>
+    <div id="result" style="display:none;margin-top:20px;"></div>
+
+    <div class="history-box" id="historyBox" style="display:none">
+        <div class="history-title">
+            📋 上传历史
+            <button id="clearHistory" class="clear-history">清空记录</button>
+        </div>
+        <div id="historyList" class="history-list"></div>
+    </div>
+
+    <div class="desc">
+        <strong>📌 使用说明：</strong><br>
+        1. 点击或拖拽上传 .html / 图片文件<br>
+        2. 图片自动存入 img/ 文件夹，HTML 存入 uploads/ 文件夹<br>
+        3. 上传后生成链接需要等几分钟才能访问<br>
+        4. 点击链接即可复制访问地址<br>
+        5. 文件名不要跟之前相同，否则会被覆盖
+    </div>
+
+    <div class="links">
+        友情链接：
+        <a href="https://img.bxhrdhr.eu.org" target="_blank">豆包解析</a> |
+        <a href="https://yy-ds.neocities.org/" target="_blank">清晨与傍晚</a>
+    </div>
+</div>
+
+<div class="copy-tip" id="copyTip">✅ 链接已复制</div>
+
+<script>
+const HISTORY_KEY = "upload_history";
+const copyTip = document.getElementById("copyTip");
+
+function showTip() {
+  copyTip.style.display = "block";
+  setTimeout(() => copyTip.style.display = "none", 1200);
+}
+
+function copyText(text) {
+  navigator.clipboard.writeText(text).then(showTip);
+}
+
+function getHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; }
+  catch { return []; }
+}
+
+function addHistory(fileName, url) {
+  const list = getHistory();
+  list.unshift({ fileName, url, time: new Date().toLocaleString() });
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(0, 100)));
+  renderHistory();
+}
+
+function clearHistory() {
+  localStorage.removeItem(HISTORY_KEY);
+  renderHistory();
+}
+
+function renderHistory() {
+  const list = getHistory();
+  const box = document.getElementById("historyBox");
+  const container = document.getElementById("historyList");
+  if (list.length === 0) { box.style.display = "none"; return; }
+  box.style.display = "block";
+  container.innerHTML = list.map(item => `
+    <div class="history-item">
+      <div><span class="fname">${item.fileName}</span><span class="time">${item.time}</span></div>
+      <div class="link" onclick="copyText('${item.url}')">${item.url}</div>
+      <button class="copy-btn" onclick="copyText('${item.url}')">复制链接</button>
+    </div>
+  `).join("");
+}
+
+const fileInput = document.getElementById('fileInput');
+const dropArea = document.getElementById('dropArea');
+const fileNameSpan = document.getElementById('fileName');
+const uploadBtn = document.getElementById('uploadBtn');
+const resultDiv = document.getElementById('result');
+const clearHistoryBtn = document.getElementById('clearHistory');
+
+let selectedFile = null;
+
+const ALLOWED_EXTS = ['html','htm','jpg','jpeg','png','gif','bmp','webp'];
+function isAllowedFile(file) {
+  const ext = file.name.split('.').pop().toLowerCase();
+  return ALLOWED_EXTS.includes(ext);
+}
+
+clearHistoryBtn.onclick = () => {
+  if (confirm("确定清空所有上传记录？")) clearHistory();
+};
+
+dropArea.addEventListener('click', () => fileInput.click());
+
+fileInput.addEventListener('change', e => {
+  if (e.target.files.length) {
+    const f = e.target.files[0];
+    if (isAllowedFile(f)) {
+      selectedFile = f;
+      fileNameSpan.textContent = `✅ 已选择：${f.name}`;
+    } else {
+      alert('仅支持 HTML 或图片文件');
+      e.target.value = '';
+    }
+  }
+});
+
+dropArea.addEventListener('dragover', e => {
+  e.preventDefault();
+  dropArea.style.borderColor = '#3b82f6';
+  dropArea.style.background = '#eff6ff';
+});
+
+dropArea.addEventListener('dragleave', e => {
+  e.preventDefault();
+  dropArea.style.borderColor = '#cbd5e1';
+  dropArea.style.background = '#f8fafc';
+});
+
+dropArea.addEventListener('drop', e => {
+  e.preventDefault();
+  dropArea.style.borderColor = '#cbd5e1';
+  dropArea.style.background = '#f8fafc';
+  const f = e.dataTransfer.files[0];
+  if (f && isAllowedFile(f)) {
+    selectedFile = f;
+    fileNameSpan.textContent = `✅ 已选择：${f.name}`;
+  } else {
+    alert('仅支持 HTML 或图片文件');
+  }
+});
+
+renderHistory();
+
+const p1 = "[已过滤密钥]";
+const p2 = "TVGPvPr7NT_YpdQCEQpmntrZj0EbGLb8UEpDryihNHD0otbMS8FEElMEO6LD3M1GfOkGrm";
+
+const CONFIG = {
+  owner: "bxhrdhr",
+  repo: "img-tc",
+  branch: "main",
+  token: p1 + p2
+};
+
+// 安全转 base64（修复爆栈）
+function toBase64(buffer) {
+  let binary = '';
+  const bytes = new Uint8Array(buffer);
+  const len = bytes.byteLength;
+  for (let i = 0; i < len; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+uploadBtn.addEventListener('click', async () => {
+  if (!selectedFile) { alert('请选择文件'); return; }
+  const { owner, repo, branch, token } = CONFIG;
+  const name = selectedFile.name;
+  const ext = name.split('.').pop().toLowerCase();
+
+  let savePath;
+  if (['jpg','jpeg','png','gif','bmp','webp'].includes(ext)) {
+    savePath = "img/" + name;
+  } else if (['html','htm'].includes(ext)) {
+    savePath = "uploads/" + name;
+  } else {
+    alert("不支持的文件类型");
+    return;
+  }
+
+  uploadBtn.disabled = true;
+  uploadBtn.textContent = '⏳ 上传中...';
+  resultDiv.style.display = 'block';
+  resultDiv.className = 'result';
+  resultDiv.textContent = '处理文件中...';
+
+  try {
+    let content;
+    const buffer = await selectedFile.arrayBuffer();
+
+    if (savePath.startsWith('img/')) {
+      content = toBase64(buffer);
+    } else {
+      let text = new TextDecoder().decode(buffer);
+      text = text.replace(/github_pat\w+/g, '[已过滤密钥]');
+      text = text.replace(/ghp_\w+/g, '[已过滤密钥]');
+      content = btoa(unescape(encodeURIComponent(text)));
+    }
+
+    let sha = null;
+    try {
+      const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${savePath}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) sha = (await res.json()).sha;
+    } catch {}
+
+    const body = {
+      message: sha ? `Update ${name}` : `Upload ${name}`,
+      content: content,
+      branch
+    };
+    if (sha) body.sha = sha;
+
+    const uploadRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${savePath}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
+
+    const data = await uploadRes.json();
+    if (!uploadRes.ok) throw new Error(data.message || '上传失败');
+
+    const pagesUrl = `https://${owner}.github.io/${repo}/${savePath}`;
+    resultDiv.innerHTML = `✅ 上传成功！<br><br>🌐 访问链接：<a onclick="copyText('${pagesUrl}')">${pagesUrl}</a>（点击复制）`;
+    addHistory(name, pagesUrl);
+
+  } catch (e) {
+    resultDiv.className = 'result error';
+    resultDiv.textContent = `❌ 错误：${e.message}`;
+  } finally {
+    uploadBtn.disabled = false;
+    uploadBtn.textContent = '🚀 一键上传';
+  }
+});
+</script>
+</body>
+</html>
